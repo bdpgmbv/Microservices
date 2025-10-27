@@ -1,0 +1,210 @@
+version: '3.8'
+
+services:
+  # ========================================
+  # Configuration Server (Must start first)
+  # ========================================
+  config-server:
+    build:
+      context: ./config-server
+      dockerfile: Dockerfile
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ========================================
+  # Service Discovery (Eureka Server)
+  # ========================================
+  eureka-server:
+    build:
+      context: ./eureka-server
+      dockerfile: Dockerfile
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - microservices-network
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8761/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  # ========================================
+  # Databases
+  # ========================================
+  
+  # Product Service Database
+  product-postgres:
+    image: postgres:15-alpine
+    container_name: product-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: productdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - product-db-data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Order Service Database
+  order-postgres:
+    image: postgres:15-alpine
+    container_name: order-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: orderdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - order-db-data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Notification Service Database
+  notification-mongodb:
+    image: mongo:7
+    container_name: notification-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: notificationdb
+    ports:
+      - "27017:27017"
+    volumes:
+      - notification-db-data:/data/db
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ========================================
+  # Microservices
+  # ========================================
+  
+  # Product Catalog Service
+  product-service:
+    build:
+      context: ./product-service
+      dockerfile: Dockerfile
+    container_name: product-service
+    ports:
+      - "8081:8081"
+    environment:
+      DB_HOST: product-postgres
+      DB_PORT: 5432
+      DB_NAME: productdb
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      SPRING_PROFILES_ACTIVE: dev
+    networks:
+      - microservices-network
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      product-postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Order Service
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    container_name: order-service
+    ports:
+      - "8082:8082"
+    environment:
+      DB_HOST: order-postgres
+      DB_PORT: 5432
+      DB_NAME: orderdb
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      SPRING_PROFILES_ACTIVE: dev
+    networks:
+      - microservices-network
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      order-postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Notification Service
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    ports:
+      - "8083:8083"
+    environment:
+      MONGODB_URI: mongodb://notification-mongodb:27017/notificationdb
+      SPRING_PROFILES_ACTIVE: dev
+    networks:
+      - microservices-network
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      notification-mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ========================================
+  # Optional: Database Management Tools
+  # ========================================
+  
+  # pgAdmin - PostgreSQL Management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    networks:
+      - microservices-network
+    depends_on:
+      - product-postgres
+      - order-postgres
+
+volumes:
+  product-db-data:
+    driver: local
+  order-db-data:
+    driver: local
+  notification-db-data:
+    driver: local
+
+networks:
+  microservices-network:
+    driver: bridge

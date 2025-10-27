@@ -24,12 +24,23 @@ repositories {
 	mavenCentral()
 }
 
+ext {
+	set("springCloudVersion", "2024.0.0")
+}
+
 dependencies {
 	// Spring Boot Starters
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
+
+	// Spring Cloud - Service Discovery
+	implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")
+
+	// Spring Cloud - Config Client
+	implementation("org.springframework.cloud:spring-cloud-starter-config")
+	implementation("org.springframework.cloud:spring-cloud-starter-bootstrap")
 
 	// Database
 	runtimeOnly("org.postgresql:postgresql")
@@ -48,6 +59,12 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("com.h2database:h2")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+dependencyManagement {
+	imports {
+		mavenBom("org.springframework.cloud:spring-cloud-dependencies:${property("springCloudVersion")}")
+	}
 }
 
 tasks.withType<Test> {
