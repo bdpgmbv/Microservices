@@ -1,0 +1,17 @@
+# Order Service Configuration
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/orderdb
+    username: postgres
+    password: postgres
+
+# Feature Flags
+features:
+  order-tracking: true
+  email-notification: true
+
+# Business Configuration
+business:
+  max-order-quantity: 1000
+  order-timeout-minutes: 30
+  auto-cancel-pending-orders-days: 7

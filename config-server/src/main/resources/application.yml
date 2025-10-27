@@ -1,0 +1,61 @@
+spring:
+  application:
+    name: config-server
+  
+  cloud:
+    config:
+      server:
+        # Native profile - read from local filesystem/classpath
+        native:
+          search-locations: classpath:/config-repo
+        # Git profile - for production use
+        git:
+          uri: file://${user.home}/config-repo
+          # For remote git: uri: https://github.com/your-org/config-repo
+          clone-on-start: true
+          default-label: main
+  
+  profiles:
+    active: native  # Use 'git' for Git-based configuration
+
+server:
+  port: 8888
+
+# Eureka Client Configuration
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,refresh,env
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+
+# Logging
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.config: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# Application Info
+info:
+  app:
+    name: Config Server
+    description: Centralized configuration management for all microservices
+    version: 1.0.0
+    developer: Vyshali

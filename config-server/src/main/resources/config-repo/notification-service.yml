@@ -1,0 +1,22 @@
+# Notification Service Configuration
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/notificationdb
+      database: notificationdb
+
+# Feature Flags
+features:
+  email-enabled: true
+  sms-enabled: false
+  push-notification-enabled: true
+
+# Notification Configuration
+notification:
+  email:
+    from: noreply@ecommerce.com
+    smtp-host: smtp.gmail.com
+    smtp-port: 587
+  retry:
+    max-attempts: 3
+    delay-seconds: 5

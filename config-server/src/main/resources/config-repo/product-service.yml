@@ -1,0 +1,16 @@
+# Product Service Configuration
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/productdb
+    username: postgres
+    password: postgres
+
+# Feature Flags
+features:
+  new-product-api: true
+  discount-enabled: false
+
+# Business Configuration
+business:
+  max-products-per-page: 50
+  default-stock-threshold: 10
